@@ -37,11 +37,13 @@ A daily pipeline of stages, each swappable:
    great visual base. Optional AI imagery for thumbnails/backgrounds.
 6. **Assemble** — text-to-speech voiceover + charts/visuals + captions → a finished short
    video.
-7. **Quality gate** — the one human step. Two modes:
-   - *Attended:* you approve/reject before publish.
-   - *Away mode:* auto-publish only items above a confidence threshold; hold the rest for
-     your review when you're back.
-8. **Publish** — post video(s) on a schedule; assemble and send the newsletter.
+7. **Queue & notify** — the engine keeps a small buffer of finished videos *ready for
+   review* (target: 1–3 ahead, so you never wait on generation). Each time you publish
+   one, it immediately starts building the next to refill the buffer.
+8. **Review & publish (from your phone)** — the finished video is sent to you in Telegram
+   with one-tap **Publish / Skip / Regenerate** buttons. You review from anywhere; nothing
+   goes live without your tap. On publish, the backend uploads to YouTube (and TikTok — see
+   the caveat in §3) and the story is added to that day's newsletter.
 9. **Log** — write every action, reason, and outcome to the journal (feeds component D).
 
 ### B. Owned Audience (the asset / the moat)
@@ -76,6 +78,9 @@ Ordered by how early they realistically pay:
   - "How's the email list growing?"
 - It doubles as the **control surface**: tell it to change cadence, shift the niche focus,
   or tighten the quality threshold.
+- **Where it lives:** the same **Telegram bot** you review videos in. Reviewing,
+  publishing, and chatting with your assistant all happen in one place, on your phone,
+  from anywhere.
 
 ---
 
@@ -89,11 +94,26 @@ Ordered by how early they realistically pay:
   (visuals), a video-assembly step, and platform/email APIs for publishing.
 - **Config-driven**: niche, cadence, thresholds, and autonomy level all set in config, not
   hardcoded.
-- **Cheap to run**: free/low-cost hosting + free API tiers; scales up only if it works.
+- **Cheap to run**: free API tiers everywhere; one small always-on host (~$5/mo or a spare
+  machine) because the engine must run continuously to keep the queue full.
 
-Likely stack (decide later): Python for the pipeline; a small always-on process or
-scheduled job; a simple DB (e.g. SQLite/Postgres); the assistant as a chat layer over the
-journal.
+### Chosen stack
+
+| Piece | Choice | Notes |
+|---|---|---|
+| Language | **Python** | Best single ecosystem for finance data + AI + charts + video |
+| Brain (curate / verify / write) | **A current Claude model** | Sonnet-class for high-volume drafting; exact model + cost pinned at build time |
+| Voice (TTS) | **Free/cheap TTS to start** | Upgrade to a premium voice once there's revenue — voice quality drives retention |
+| Charts / visuals | **matplotlib / plotly** | Our own branded charts from the data — free and copyright-clean |
+| Video assembly | **ffmpeg** | Builds the 9:16 video for Shorts + TikTok |
+| Queue + journal DB | **SQLite** | Zero-config; holds both the review queue and the assistant's memory |
+| Phone cockpit | **Telegram bot** | Review + one-tap publish + assistant chat, all in one place, from anywhere |
+| Publishing | **YouTube Data API** (+ TikTok, see caveat) | YouTube auto-uploads on your tap |
+
+**TikTok caveat:** YouTube's upload API is straightforward. TikTok's posting API needs app
+approval and is more restricted, so at the start "publish to TikTok" may mean the bot
+hands the finished file to your phone to post via the TikTok app (a few seconds), until/if
+we get API posting approved. YouTube auto-uploads regardless.
 
 ---
 
@@ -129,15 +149,22 @@ find a working angle *first*, then automate hard.
 
 ---
 
-## 6. Open decisions (for when you're back at a main PC)
+## 6. Locked decisions
 
-These change what we build, so they come first:
+1. **Niche:** **Finance for beginners** — markets & money explained simply. Broad
+   top-of-funnel, advertiser-friendly, strong affiliate fit. *Still needs a distinct
+   angle/voice to stand out — that's the differentiator, not the automation.*
+2. **Platforms:** **YouTube Shorts + TikTok** (one 9:16 video serves both).
+3. **Cadence:** rolling queue — keep a **1–3 video buffer** ready; refill the moment you
+   publish one, so there's never dead time.
+4. **Autonomy:** **auto-generate → you review & publish from your phone** (via Telegram).
+   Nothing goes live without your tap.
+5. **Stack:** see §3 — Python, Claude, SQLite, matplotlib/plotly, ffmpeg, a Telegram bot
+   cockpit, YouTube API (TikTok with the noted caveat), on a ~$5/mo always-on host.
 
-1. **Niche angle within finance** — e.g. markets-for-beginners, macro/economy, crypto,
-   personal finance, a specific voice/persona. (Narrower = easier to stand out.)
-2. **Primary discovery platform** — YouTube Shorts, TikTok, or both.
-3. **Cadence** — daily vs a few times a week.
-4. **Autonomy level** — fully auto-publish vs approve-then-publish while you're away.
-5. **Stack specifics** — language, which data/news APIs, which TTS, hosting.
+## 7. Next: Phase 1 (when back at a main PC)
 
-Once these are set, Phase 0 begins.
+The remaining creative choice before building is the **angle/voice** within
+"finance for beginners" — the thing that makes someone follow *you*. That's the Phase 1
+job: try a few angles by hand (AI-drafted) and see what actually gets views and signups,
+*then* automate the winner.

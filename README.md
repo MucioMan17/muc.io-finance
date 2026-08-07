@@ -61,6 +61,15 @@ See [`docs/blueprint.md`](docs/blueprint.md) for the full architecture and roadm
 
 ## Status
 
-**Planning.** Next step is a set of decisions to make when back at a main PC — the exact
-finance niche/voice, the primary platform, cadence, and the level of autonomy. They're
-listed at the end of the blueprint.
+**Planning — direction locked.**
+
+Decisions made:
+- **Niche:** finance for beginners (markets & money, explained simply)
+- **Platforms:** YouTube Shorts + TikTok
+- **Cadence:** rolling queue, keep 1–3 videos ready for review
+- **Autonomy:** auto-generate → review & publish from your phone (Telegram)
+- **Stack:** Python · Claude · SQLite · matplotlib/plotly · ffmpeg · Telegram bot ·
+  YouTube API — on a ~$5/mo always-on host
+
+**Next step:** Phase 1 — find the distinct *angle/voice* within beginner finance by testing
+a few by hand, then automate the winner. See [`docs/blueprint.md`](docs/blueprint.md).
