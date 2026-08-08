@@ -95,8 +95,12 @@ Ordered by how early they realistically pay:
   (visuals), a video-assembly step, and platform/email APIs for publishing.
 - **Config-driven**: niche, cadence, thresholds, and autonomy level all set in config, not
   hardcoded.
-- **Cheap to run**: free API tiers everywhere; one small always-on host (~$5/mo or a spare
-  machine) because the engine must run continuously to keep the queue full.
+- **Cheap to run — realistic total ~$5–15/mo:** the Telegram bot, YouTube/TikTok posting,
+  charts, and video assembly are all free. The only real costs are **Claude** (the AI
+  brain — a paid cloud API, not a free download; ~2–5¢ per video, so **~$2–5/mo** at a few
+  videos/day on a cost-efficient model) and **one small always-on host** (~$5/mo, or $0 on
+  a spare home machine) needed to keep the engine running 24/7. A free local AI model is
+  possible but needs a powerful machine and gives lower quality — not worth it here.
 
 ### Chosen stack
 
