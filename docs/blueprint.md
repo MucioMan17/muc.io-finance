@@ -29,14 +29,15 @@ A daily pipeline of stages, each swappable:
 3. **Verify** — cross-check each fact against ≥2 independent sources. Anything that can't
    be verified gets flagged and held, not published. This is the misinformation guard —
    non-negotiable for a news product.
-4. **Write** — draft the newsletter section and a short video script in *original wording*
-   (facts are free to use; their text/images/footage are not) and in a consistent brand
-   voice.
+4. **Write** — draft the newsletter section and a **~150-word** video script (≈60 seconds)
+   in *original wording* (facts are free to use; their text/images/footage are not) and in
+   a consistent brand voice. Structure: a hard hook in the first line → one idea explained
+   over 2–3 chart beats → a takeaway + newsletter nudge.
 5. **Visualize** — generate charts from the data we pulled (price moves, comparisons).
    These are ours — legal, no copyright risk — which is the whole reason finance data is a
    great visual base. Optional AI imagery for thumbnails/backgrounds.
-6. **Assemble** — text-to-speech voiceover + charts/visuals + captions → a finished short
-   video.
+6. **Assemble** — text-to-speech voiceover + charts/visuals + captions → a finished
+   **60-second, 9:16** video.
 7. **Queue & notify** — the engine keeps a small buffer of finished videos *ready for
    review* (target: 1–3 ahead, so you never wait on generation). Each time you publish
    one, it immediately starts building the next to refill the buffer.
@@ -155,6 +156,7 @@ find a working angle *first*, then automate hard.
    top-of-funnel, advertiser-friendly, strong affiliate fit. *Still needs a distinct
    angle/voice to stand out — that's the differentiator, not the automation.*
 2. **Platforms:** **YouTube Shorts + TikTok** (one 9:16 video serves both).
+   **Format: every video is exactly 1 minute** (≈150-word script, hook-first).
 3. **Cadence:** rolling queue — keep a **1–3 video buffer** ready; refill the moment you
    publish one, so there's never dead time.
 4. **Autonomy:** **auto-generate → you review & publish from your phone** (via Telegram).
