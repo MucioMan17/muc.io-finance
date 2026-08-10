@@ -62,7 +62,12 @@ def run_bot(cfg) -> None:
         ]])
         if v["video_path"]:
             with open(v["video_path"], "rb") as f:
-                await update.message.reply_video(f, caption=preview, parse_mode="Markdown", reply_markup=buttons)
+                # Videos are big; give the upload real time (defaults are ~5s).
+                await update.message.reply_video(
+                    f, caption=preview[:1000], parse_mode="Markdown", reply_markup=buttons,
+                    supports_streaming=True,
+                    read_timeout=180, write_timeout=180, connect_timeout=30, pool_timeout=30,
+                )
         else:
             await update.message.reply_text(preview + "\n\n_(no video file yet — voice/ffmpeg not set up)_",
                                             parse_mode="Markdown", reply_markup=buttons)
@@ -113,10 +118,24 @@ def run_bot(cfg) -> None:
         )
         await update.message.reply_text(answer or "Here's what I've done recently:\n" + log_text[:1500])
 
-    app = Application.builder().token(cfg.telegram_bot_token).build()
+    async def on_error(_update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Log errors quietly instead of dumping a huge traceback to the terminal."""
+        db.log("bot", f"error: {context.error!r}")
+        print(f"[bot] handled error: {context.error!r}")
+
+    app = (
+        Application.builder()
+        .token(cfg.telegram_bot_token)
+        .read_timeout(60)
+        .write_timeout(180)
+        .connect_timeout(30)
+        .pool_timeout(30)
+        .build()
+    )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("queue", queue))
     app.add_handler(CallbackQueryHandler(on_button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+    app.add_error_handler(on_error)
     db.log("bot", "Cockpit started")
     app.run_polling()
