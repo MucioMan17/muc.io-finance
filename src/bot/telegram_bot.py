@@ -65,11 +65,15 @@ def run_bot(cfg) -> None:
             InlineKeyboardButton("🔄 Regenerate", callback_data=f"regen:{v['id']}"),
         ]])
         if v["video_path"]:
+            vw = cfg.get("video", "width", default=1080)
+            vh = cfg.get("video", "height", default=1920)
             with open(v["video_path"], "rb") as f:
                 # Videos are big; give the upload real time (defaults are ~5s).
+                # Passing width/height tells Telegram it's vertical so the
+                # preview shows tall (9:16) instead of a squished square.
                 await update.message.reply_video(
                     f, caption=preview[:1000], parse_mode="Markdown", reply_markup=buttons,
-                    supports_streaming=True,
+                    supports_streaming=True, width=vw, height=vh,
                     read_timeout=180, write_timeout=180, connect_timeout=30, pool_timeout=30,
                 )
         else:
