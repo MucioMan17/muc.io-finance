@@ -26,6 +26,7 @@ def main() -> None:
     p.add_argument("--once", action="store_true", help="top up the buffer then exit")
     p.add_argument("--serve", action="store_true", help="run the engine loop forever")
     p.add_argument("--bot", action="store_true", help="run the Telegram cockpit")
+    p.add_argument("--auth-youtube", action="store_true", help="one-time YouTube sign-in")
     args = p.parse_args()
 
     cfg = load()
@@ -61,6 +62,14 @@ def main() -> None:
     if args.bot:
         from src.bot.telegram_bot import run_bot
         run_bot(cfg)
+        return
+
+    if args.auth_youtube:
+        from src.pipeline import publish
+        ok = publish.authorize(cfg)
+        print("✅ YouTube authorized — token cached. Publishing will just work now."
+              if ok else
+              "❌ No secrets/youtube_client_secret.json found (see PUBLISHING.md).")
         return
 
     p.print_help()

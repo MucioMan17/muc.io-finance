@@ -36,6 +36,11 @@ def build_metadata(cfg, story: dict, script: dict) -> tuple[str, str, list[str]]
     return title, description, tags
 
 
+def authorize(cfg) -> bool:
+    """Run the one-time browser sign-in and cache the token. True on success."""
+    return _get_credentials(cfg) is not None
+
+
 def _get_credentials(cfg):
     """Load a cached token, refresh it, or run the one-time browser sign-in."""
     secrets = Path(cfg.youtube_client_secrets)
@@ -72,6 +77,7 @@ def upload_youtube(cfg, video_path: str, title: str, description: str,
     from googleapiclient.discovery import build as gbuild
     from googleapiclient.http import MediaFileUpload
 
+    privacy = cfg.get("post", "privacy", default="public")  # public | unlisted | private
     youtube = gbuild("youtube", "v3", credentials=creds)
     request = youtube.videos().insert(
         part="snippet,status",
@@ -82,7 +88,7 @@ def upload_youtube(cfg, video_path: str, title: str, description: str,
                 "tags": tags or [],
                 "categoryId": "25",  # News & Politics
             },
-            "status": {"privacyStatus": "public", "selfDeclaredMadeForKids": False},
+            "status": {"privacyStatus": privacy, "selfDeclaredMadeForKids": False},
         },
         media_body=MediaFileUpload(video_path, chunksize=-1, resumable=True),
     )
