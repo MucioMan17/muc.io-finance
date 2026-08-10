@@ -5,8 +5,10 @@ Captions are made two ways, for reliability:
   2. Time-distributed — if no word timings arrive, we measure the audio's length
      with ffprobe and spread the caption cues across it proportionally.
 
-Either way you get an SRT to burn into the video. Returns (audio_path, srt_path);
-srt_path is None only if we couldn't produce captions at all.
+Output is an ASS subtitle file (not SRT) with the real 1080x1920 canvas baked
+into its header, so caption size and position are in ACTUAL pixels — no surprise
+6.7x scaling. Returns (audio_path, ass_path); ass_path is None only if we
+couldn't produce captions at all.
 """
 from __future__ import annotations
 
@@ -20,20 +22,42 @@ from .. import db
 TICKS_PER_SECOND = 10_000_000  # edge-tts offsets are in 100-nanosecond ticks
 WORDS_PER_CUE = 3
 
+# Caption look, in real pixels (because the ASS header sets PlayResX/Y to the video size).
+FONT_SIZE = 82
+OUTLINE = 5
+SHADOW = 1
+MARGIN_V = 320   # distance of the caption baseline from the bottom edge
 
-def _fmt_ts(seconds: float) -> str:
+ASS_HEADER = """[Script Info]
+ScriptType: v4.00+
+PlayResX: {w}
+PlayResY: {h}
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,{fs},&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,{outline},{shadow},2,90,90,{mv},1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+
+
+def _fmt_ass(seconds: float) -> str:
     seconds = max(0.0, seconds)
     h = int(seconds // 3600)
     m = int((seconds % 3600) // 60)
     s = seconds % 60
-    return f"{h:02d}:{m:02d}:{s:06.3f}".replace(".", ",")
+    return f"{h:d}:{m:02d}:{s:05.2f}"  # H:MM:SS.cc
 
 
-def _cues_to_srt(cues: list[tuple[float, float, str]]) -> str:
-    blocks = []
-    for i, (start, end, text) in enumerate(cues, 1):
-        blocks.append(f"{i}\n{_fmt_ts(start)} --> {_fmt_ts(end)}\n{text.upper()}\n")
-    return "\n".join(blocks)
+def _cues_to_ass(cues: list[tuple[float, float, str]], w: int, h: int) -> str:
+    lines = [ASS_HEADER.format(w=w, h=h, fs=FONT_SIZE, outline=OUTLINE, shadow=SHADOW, mv=MARGIN_V)]
+    for start, end, text in cues:
+        safe = text.upper().replace("{", "(").replace("}", ")").replace("\n", " ")
+        lines.append(f"Dialogue: 0,{_fmt_ass(start)},{_fmt_ass(end)},Default,,0,0,0,,{safe}")
+    return "\n".join(lines) + "\n"
 
 
 def _group_word_cues(words: list[tuple[float, float, str]]) -> list[tuple[float, float, str]]:
@@ -77,8 +101,10 @@ def _audio_duration(path: Path) -> float | None:
 def synth(cfg, text: str, out_path: str | Path) -> tuple[str, str | None]:
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    srt_path = out_path.with_suffix(".srt")
+    ass_path = out_path.with_suffix(".ass")
     voice = cfg.get("tts", "voice", default="en-US-AriaNeural")
+    w = cfg.get("video", "width", default=1080)
+    h = cfg.get("video", "height", default=1920)
 
     import edge_tts  # imported here so the rest of the app runs without it installed
 
@@ -104,9 +130,9 @@ def synth(cfg, text: str, out_path: str | Path) -> tuple[str, str | None]:
         cues, source = (_timed_cues(text, duration) if duration else []), "time-distributed"
 
     if cues:
-        srt_path.write_text(_cues_to_srt(cues), encoding="utf-8")
+        ass_path.write_text(_cues_to_ass(cues, w, h), encoding="utf-8")
         db.log("tts", f"Voiceover + {source} captions ({len(cues)} cues) -> {out_path.name}")
-        return str(out_path), str(srt_path)
+        return str(out_path), str(ass_path)
 
     db.log("tts", f"Voiceover, no captions available -> {out_path.name}")
     return str(out_path), None

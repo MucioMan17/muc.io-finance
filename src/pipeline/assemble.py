@@ -19,13 +19,6 @@ from .tts import _audio_duration
 
 FPS = 30
 
-# libass caption styling. Sized/positioned blind — may need a nudge once seen.
-CAPTION_STYLE = (
-    "FontName=Arial,FontSize=72,Bold=1,"
-    "PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-    "BorderStyle=1,Outline=5,Shadow=1,Alignment=2,MarginV=260"
-)
-
 
 def build(cfg, image_path: str, audio_path: str, out_path: str | Path,
           srt_path: str | None = None) -> str:
@@ -40,7 +33,7 @@ def build(cfg, image_path: str, audio_path: str, out_path: str | Path,
 
     workdir = out_path.parent
     img, aud, out = Path(image_path).name, Path(audio_path).name, out_path.name
-    srt = Path(srt_path).name if srt_path else None
+    subs = Path(srt_path).name if srt_path else None  # an .ass file (styling baked in)
 
     duration = _audio_duration(Path(audio_path))
     frames = int(round(duration * FPS)) if duration else None
@@ -52,13 +45,14 @@ def build(cfg, image_path: str, audio_path: str, out_path: str | Path,
     ) if frames else None
 
     def _subs(vf: str) -> str:
-        return f"{vf},subtitles={srt}:original_size={w}x{h}:force_style='{CAPTION_STYLE}'"
+        # The .ass file carries its own styling (size/position baked in at video res).
+        return f"{vf},subtitles={subs}"
 
     # Fanciest first; each entry falls back to the next if ffmpeg errors.
     attempts: list[tuple[str, str]] = []
-    if srt and motion_vf:
+    if subs and motion_vf:
         attempts.append(("motion+captions", _subs(motion_vf)))
-    if srt:
+    if subs:
         attempts.append(("captions", _subs(base_vf)))
     if motion_vf:
         attempts.append(("motion", motion_vf))
