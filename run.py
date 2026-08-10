@@ -32,6 +32,8 @@ def main() -> None:
     p.add_argument("--auth-youtube", action="store_true", help="one-time YouTube sign-in")
     p.add_argument("--reset", action="store_true",
                    help="forget skipped/queued clips so their stories can be covered again (keeps published)")
+    p.add_argument("--reset-all", action="store_true",
+                   help="wipe ALL clip history INCLUDING published (full fresh start — only if nothing is really posted)")
     args = p.parse_args()
 
     cfg = load()
@@ -45,6 +47,12 @@ def main() -> None:
         n = db.reset_history()
         print(f"Reset: forgot {n} skipped/queued clip(s). Those stories can be covered "
               "again now (any you've published are kept, so they won't repost).")
+        return
+
+    if args.reset_all:
+        n = db.reset_history(keep_published=False)
+        print(f"Full reset: cleared {n} clip(s), including any marked published. "
+              "Every story is open again.")
         return
 
     from src import orchestrator  # imported after db.init so logging works

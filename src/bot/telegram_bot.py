@@ -168,17 +168,33 @@ def run_bot(cfg, engine: bool = False) -> None:
             if new_id is None:
                 await q.message.reply_text("Couldn't rebuild right now — try /new shortly.")
         elif action == "pub":
-            scr = json.loads(row["script"]) if row and row["script"] else {}
-            story = {"title": row["story_title"] if row else ""}
+            if not row:
+                await q.message.reply_text("That clip is no longer in the queue. Try /queue.")
+                return
+            if not row["video_path"]:
+                await q.message.reply_text("⚠️ This clip has no video file to publish. Tap /new for a fresh one.")
+                return
+            scr = json.loads(row["script"]) if row["script"] else {}
+            story = {"title": row["story_title"]}
             title, desc, tags = publish.build_metadata(cfg, story, scr)
-            yt = (publish.upload_youtube(cfg, row["video_path"], title, desc, tags)
-                  if row and row["video_path"] else None)
-            db.update_video(vid, status="published")
-            db.log("bot", f"You published clip #{vid} (youtube={yt})", video_id=vid)
-            msg = f"✅ Published to YouTube: {yt}" if yt else "✅ Marked published (no YouTube auth yet)."
-            if row and row["video_path"]:
-                msg += "\nFor TikTok, post the video file I sent — a few seconds."
-            await q.message.reply_text(msg)
+            await q.message.reply_text("⏫ Uploading to YouTube… (a few seconds)")
+            url, err = await asyncio.to_thread(
+                publish.upload_youtube, cfg, row["video_path"], title, desc, tags
+            )
+            if url:
+                db.update_video(vid, status="published")
+                db.log("bot", f"You published clip #{vid} -> {url}", video_id=vid)
+                await q.message.reply_text(
+                    f"✅ Published to YouTube: {url}\n"
+                    "For TikTok, post the video file I sent — a few seconds."
+                )
+            else:
+                # Do NOT mark published — leave it in the queue so you can retry.
+                db.log("bot", f"Publish failed for #{vid}: {err}", video_id=vid)
+                await q.message.reply_text(
+                    f"❌ Not published — {err}\n\nThe clip is still in your queue, so you can "
+                    "fix that and tap Publish again."
+                )
 
     async def chat(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
         """Free-text questions -> the reporting assistant, answering from the journal."""
