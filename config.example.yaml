@@ -1,0 +1,28 @@
+# Copy to "config.yaml" and tweak. Non-secret settings live here;
+# secrets live in .env. config.yaml is git-ignored.
+
+brand:
+  name: "muc.io finance"          # your channel name (change me)
+  # The angle, baked into every script. Full spec in docs/blueprint.md §8.
+  audience: "people in their late teens and 20s who feel behind on money"
+  voice: "warm, encouraging teacher — calm, jargon-free, never condescending, never fear-mongering"
+  format: "What just happened to your money"
+
+queue:
+  buffer_target: 3                # keep this many videos ready for review
+  poll_seconds: 900              # how often the engine checks the buffer (15 min)
+
+video:
+  seconds: 60                     # every video is exactly 1 minute
+  width: 1080                     # 9:16 vertical
+  height: 1920
+  words_target: 150               # ~150 words = ~60s of speech
+
+tts:
+  voice: "en-US-AriaNeural"       # a warm edge-tts voice; see SETUP.md for alternatives
+
+# Finance news sources (RSS — free, no keys). Add/remove freely.
+feeds:
+  - "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"
+  - "https://www.cnbc.com/id/100003114/device/rss/rss.html"
+  - "https://www.ft.com/rss/home"

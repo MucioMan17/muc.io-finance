@@ -1,0 +1,17 @@
+# --- Core (needed for the "dry" run: news -> script -> chart) ---
+feedparser>=6.0        # pull finance news from RSS (free, no key)
+matplotlib>=3.8        # generate branded charts (free, offline)
+PyYAML>=6.0            # config
+python-dotenv>=1.0     # load secrets from .env
+requests>=2.31         # talk to the AI brain (OpenAI-compatible API)
+
+# --- Voice + video (needed to produce an actual video file) ---
+edge-tts>=6.1          # free text-to-speech (no key; needs internet)
+# ffmpeg is a system binary, NOT a pip package — see SETUP.md
+
+# --- Phone cockpit ---
+python-telegram-bot>=21.0
+
+# --- Publishing to YouTube (needs your OAuth credentials) ---
+google-api-python-client>=2.0
+google-auth-oauthlib>=1.2

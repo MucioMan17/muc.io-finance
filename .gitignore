@@ -1,0 +1,26 @@
+# Secrets & config
+.env
+config.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Generated media & data
+output/
+data/*.db
+data/*.sqlite3
+*.mp3
+*.mp4
+*.wav
+*.png
+!docs/**/*.png
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
