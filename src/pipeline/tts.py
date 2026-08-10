@@ -24,10 +24,11 @@ WORDS_PER_CUE = 3
 
 # Caption look, in real pixels (because the ASS header sets PlayResX/Y to the video size).
 # Alignment 5 = middle-centre: the captions ARE the hero, filling the centre of the frame.
-FONT_SIZE = 92
+FONT_SIZE = 78
 OUTLINE = 6
 SHADOW = 1
 MARGIN_V = 0
+MARGIN_H = 60   # left/right margin — wrap width = video width minus 2x this
 
 ASS_HEADER = """[Script Info]
 ScriptType: v4.00+
@@ -38,7 +39,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,{fs},&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,{outline},{shadow},5,120,120,{mv},1
+Style: Default,Arial,{fs},&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,{outline},{shadow},5,{mh},{mh},{mv},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -54,7 +55,8 @@ def _fmt_ass(seconds: float) -> str:
 
 
 def _cues_to_ass(cues: list[tuple[float, float, str]], w: int, h: int) -> str:
-    lines = [ASS_HEADER.format(w=w, h=h, fs=FONT_SIZE, outline=OUTLINE, shadow=SHADOW, mv=MARGIN_V)]
+    lines = [ASS_HEADER.format(w=w, h=h, fs=FONT_SIZE, outline=OUTLINE,
+                               shadow=SHADOW, mv=MARGIN_V, mh=MARGIN_H)]
     for start, end, text in cues:
         safe = text.upper().replace("{", "(").replace("}", ")").replace("\n", " ")
         lines.append(f"Dialogue: 0,{_fmt_ass(start)},{_fmt_ass(end)},Default,,0,0,0,,{safe}")
