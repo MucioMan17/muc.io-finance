@@ -18,7 +18,7 @@ import time
 
 from .. import db, orchestrator
 from ..brain import llm, prompts
-from ..pipeline import publish
+from ..pipeline import newsletter as news, publish
 
 
 def _only_owner(cfg, update) -> bool:
@@ -39,6 +39,9 @@ def run_bot(cfg, engine: bool = False) -> None:
     # Remember Telegram's file_id per clip so re-viewing the same clip is instant
     # (no re-upload). Cleared when the process restarts — that's fine.
     _file_id_cache: dict[int, str] = {}
+    # Pending newsletter drafts awaiting your one-tap Send, keyed by a short token.
+    _newsletter_drafts: dict[int, dict] = {}
+    _draft_seq = {"n": 0}
 
     async def start(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
         if not _only_owner(cfg, update):
@@ -48,6 +51,7 @@ def run_bot(cfg, engine: bool = False) -> None:
             "• I auto-build 1-minute clips and hold them here for your OK.\n"
             "• /queue — review the newest (Publish / Skip / Regenerate).\n"
             "• /new — build a fresh clip right now.\n"
+            "• /newsletter — draft today's email and send it (one tap).\n"
             "• /status — how many are ready / published.\n"
             "• /clear — empty the review queue.\n"
             "• /reset — re-open stories skipped earlier (keeps published).\n"
@@ -90,6 +94,43 @@ def run_bot(cfg, engine: bool = False) -> None:
             "/queue to review · /new to build now · /clear to empty",
             parse_mode="Markdown",
         )
+
+    async def newsletter(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
+        """Draft today's email from the latest story and offer a one-tap Send."""
+        if not _only_owner(cfg, update):
+            return
+        if not news.is_configured(cfg):
+            await update.message.reply_text(
+                "Newsletter isn't set up yet — add BUTTONDOWN_API_KEY to your .env (see NEWSLETTER.md)."
+            )
+            return
+        row = db.latest_scripted_video()
+        if not row:
+            await update.message.reply_text("No story to base an email on yet — build one with /new first.")
+            return
+        await update.message.reply_text("✍️ Drafting today's email…")
+
+        async def work():
+            scr = json.loads(row["script"]) if row["script"] else {}
+            try:
+                subject, body = await asyncio.to_thread(
+                    news.write_edition, cfg, row["story_title"], scr
+                )
+            except Exception as exc:  # noqa: BLE001
+                await update.message.reply_text(f"⚠️ Couldn't draft the email: {exc}")
+                return
+            _draft_seq["n"] += 1
+            token = _draft_seq["n"]
+            _newsletter_drafts[token] = {"subject": subject, "body": body}
+            buttons = InlineKeyboardMarkup([[
+                InlineKeyboardButton("📧 Send to subscribers", callback_data=f"nlsend:{token}"),
+                InlineKeyboardButton("✖️ Cancel", callback_data=f"nlcancel:{token}"),
+            ]])
+            await update.message.reply_text(
+                f"📧 SUBJECT: {subject}\n\n{body}"[:3500], reply_markup=buttons
+            )
+
+        _ctx.application.create_task(work())
 
     async def queue(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
         if not _only_owner(cfg, update):
@@ -179,12 +220,45 @@ def run_bot(cfg, engine: bool = False) -> None:
             if n else "Queue was already empty."
         )
 
+    async def _newsletter_followup(q, row, scr):
+        """After a video publishes: auto-send the matching email, or offer a one-tap draft."""
+        if not news.is_configured(cfg):
+            return
+        if cfg.get("newsletter", "auto_send", default=False):
+            try:
+                subject, body = await asyncio.to_thread(news.write_edition, cfg, row["story_title"], scr)
+                ok, detail = await asyncio.to_thread(news.send, cfg, subject, body)
+            except Exception as exc:  # noqa: BLE001
+                await q.message.reply_text(f"📧 Newsletter step failed: {exc}")
+                return
+            await q.message.reply_text(
+                f"📧 Newsletter auto-sent! {detail}" if ok else f"📧 Newsletter not sent — {detail}"
+            )
+        else:
+            await q.message.reply_text("📧 Want the matching email sent to subscribers too? Tap /newsletter.")
+
     async def on_button(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
         if not _only_owner(cfg, update):
             return
         q = update.callback_query
         await q.answer()
         action, vid = q.data.split(":")
+
+        # Newsletter buttons (handled before the clip lookup below).
+        if action == "nlsend":
+            draft = _newsletter_drafts.pop(int(vid), None)
+            if not draft:
+                await q.message.reply_text("That draft expired — run /newsletter again.")
+                return
+            await q.message.reply_text("📤 Sending the newsletter…")
+            ok, detail = await asyncio.to_thread(news.send, cfg, draft["subject"], draft["body"])
+            await q.message.reply_text(f"✅ Newsletter sent! {detail}" if ok else f"❌ Not sent — {detail}")
+            return
+        if action == "nlcancel":
+            _newsletter_drafts.pop(int(vid), None)
+            await q.message.reply_text("Okay — didn't send that one.")
+            return
+
         vid = int(vid)
         row = next((r for r in db.ready_videos() if r["id"] == vid), None)
 
@@ -221,6 +295,7 @@ def run_bot(cfg, engine: bool = False) -> None:
                     f"✅ Published to YouTube: {url}\n"
                     "For TikTok, post the video file I sent — a few seconds."
                 )
+                await _newsletter_followup(q, row, scr)
             else:
                 # Do NOT mark published — leave it in the queue so you can retry.
                 db.log("bot", f"Publish failed for #{vid}: {err}", video_id=vid)
@@ -262,6 +337,7 @@ def run_bot(cfg, engine: bool = False) -> None:
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("queue", queue))
         app.add_handler(CommandHandler("new", new))
+        app.add_handler(CommandHandler("newsletter", newsletter))
         app.add_handler(CommandHandler("status", status))
         app.add_handler(CommandHandler("clear", clear))
         app.add_handler(CommandHandler("reset", reset))

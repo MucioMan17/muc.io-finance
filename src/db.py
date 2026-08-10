@@ -113,6 +113,15 @@ def reset_history(keep_published: bool = True) -> int:
         return conn.execute(sql).rowcount
 
 
+def latest_scripted_video() -> sqlite3.Row | None:
+    """The best story to base a newsletter on: most recently published, else newest ready."""
+    with connect() as conn:
+        return conn.execute(
+            "SELECT * FROM videos WHERE script IS NOT NULL AND status IN ('published','ready') "
+            "ORDER BY (status = 'published') DESC, updated_at DESC LIMIT 1"
+        ).fetchone()
+
+
 def used_story_keys() -> set[str]:
     """URLs + titles of stories we've already turned into clips (any status).
 

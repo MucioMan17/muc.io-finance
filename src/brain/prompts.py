@@ -54,6 +54,28 @@ Return JSON only, no prose around it:
 {{"hook": "...", "what_happened": "...", "why_it_matters": "...", "takeaway": "...", "cta": "..."}}"""
 
 
+# Turn the day's story into a short email newsletter edition (NOT just the script).
+NEWSLETTER = """Write today's short email newsletter edition based on this money story.
+It should feel like a friend's email — warmer and a touch deeper than the video, but still
+short and skimmable (about 160-220 words).
+
+STORY HEADLINE: {title}
+VIDEO SCRIPT (for reference — expand on it, don't copy it):
+{script}
+
+Write for {audience}, in this voice: {voice}.
+
+Include, in this order:
+- A one-line greeting.
+- 2-3 short paragraphs: what happened, and why it matters to someone just starting out. Plain English.
+- A line starting with "One small thing you can do:" giving a single concrete, encouraging step.
+- A warm one-line sign-off.
+Do NOT give specific buy/sell advice. Only use facts implied by the story above.
+
+Return JSON only:
+{{"subject": "a punchy subject line under 60 characters, no emoji", "body": "the email in Markdown"}}"""
+
+
 # Pick a concrete, visual search term for background stock footage.
 KEYWORD = """Give ONE short stock-footage search term (1-2 words) for background video
 behind a clip about this story. It must be concrete and visual (e.g. "stock market",

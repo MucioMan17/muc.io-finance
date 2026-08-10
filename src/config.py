@@ -23,6 +23,7 @@ class Config:
     telegram_chat_id: str = ""
     youtube_client_secrets: str = "secrets/youtube_client_secret.json"
     pexels_api_key: str = ""
+    buttondown_api_key: str = ""
 
     def get(self, *keys, default=None):
         """Dotted lookup into config.yaml, e.g. cfg.get('queue', 'buffer_target')."""
@@ -59,4 +60,5 @@ def load(config_path: str | None = None) -> Config:
             "YOUTUBE_CLIENT_SECRETS", "secrets/youtube_client_secret.json"
         ),
         pexels_api_key=os.getenv("PEXELS_API_KEY", ""),
+        buttondown_api_key=os.getenv("BUTTONDOWN_API_KEY", ""),
     )
