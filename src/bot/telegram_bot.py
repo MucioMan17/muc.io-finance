@@ -10,7 +10,9 @@ Requires: pip install python-telegram-bot  (and TELEGRAM_BOT_TOKEN in .env)
 """
 from __future__ import annotations
 
+import asyncio
 import json
+import threading
 
 from .. import db, orchestrator
 from ..brain import llm, prompts
@@ -24,7 +26,9 @@ def _only_owner(cfg, update) -> bool:
     return str(update.effective_chat.id) == str(cfg.telegram_chat_id)
 
 
-def run_bot(cfg) -> None:
+def run_bot(cfg, engine: bool = False) -> None:
+    """Run the phone cockpit. If engine=True, also run the auto-builder in the
+    background so clips appear on their own — the true 'start once, walk away' mode."""
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
     from telegram.ext import (
         Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters,
@@ -34,11 +38,50 @@ def run_bot(cfg) -> None:
         if not _only_owner(cfg, update):
             return
         await update.message.reply_text(
-            "👋 I'm your finance-news engine.\n\n"
-            "• I build 1-minute clips and hold them here for your OK.\n"
-            "• /queue — review the newest one (Publish / Skip / Regenerate).\n"
-            "• /clear — empty the review queue (clears old test clips).\n"
+            "👋 I'm your finance-news engine — start me and go.\n\n"
+            "• I auto-build 1-minute clips and hold them here for your OK.\n"
+            "• /queue — review the newest (Publish / Skip / Regenerate).\n"
+            "• /new — build a fresh clip right now.\n"
+            "• /status — how many are ready / published.\n"
+            "• /clear — empty the review queue.\n"
             "• Ask me anything, e.g. 'what did you do today?'"
+        )
+
+    async def new(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
+        """Build one clip on demand, from your phone. Non-blocking."""
+        if not _only_owner(cfg, update):
+            return
+        await update.message.reply_text(
+            "🛠️ Building a fresh clip now — I'll ping you when it's ready (usually 1–2 min)."
+        )
+
+        async def work():
+            try:
+                vid = await asyncio.to_thread(orchestrator.build_one, cfg)
+                if vid is None:
+                    await update.message.reply_text(
+                        "Couldn't build one right now — no fresh story, or it was held by "
+                        "fact-check. Try /new again shortly."
+                    )
+            except Exception as exc:  # noqa: BLE001
+                await update.message.reply_text(f"⚠️ Build failed: {exc}")
+
+        _ctx.application.create_task(work())
+
+    async def status(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
+        if not _only_owner(cfg, update):
+            return
+        ready = db.count_by_status("ready")
+        published = db.count_by_status("published")
+        target = cfg.get("queue", "buffer_target", default=3)
+        mode = "auto-building in the background" if engine else "manual (start with --auto to auto-build)"
+        await update.message.reply_text(
+            "📊 *Status*\n"
+            f"• Ready to review: *{ready}*\n"
+            f"• Published all-time: *{published}*\n"
+            f"• Engine: {mode} (target *{target}* ready)\n\n"
+            "/queue to review · /new to build now · /clear to empty",
+            parse_mode="Markdown",
         )
 
     async def queue(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
@@ -87,7 +130,7 @@ def run_bot(cfg) -> None:
         db.log("bot", f"You cleared the queue ({n} clips)")
         await update.message.reply_text(
             f"🧹 Cleared {n} clip(s) from the review queue.\n"
-            "Build a fresh one with `python run.py --sample`, then /queue."
+            "Tap /new to build a fresh one, then /queue."
             if n else "Queue was already empty."
         )
 
@@ -106,9 +149,12 @@ def run_bot(cfg) -> None:
             await q.edit_message_caption("❌ Skipped.") if q.message.caption else await q.edit_message_text("❌ Skipped.")
         elif action == "regen":
             db.update_video(vid, status="skipped")
-            new_id = orchestrator.build_one(cfg)
+            await q.message.reply_text("🔄 Rebuilding — I'll ping you when the new clip is ready.")
+            # Run off the event loop so the bot stays responsive during the build.
+            new_id = await asyncio.to_thread(orchestrator.build_one, cfg)
             db.log("bot", f"You asked to regenerate #{vid} -> #{new_id}", video_id=vid)
-            await q.message.reply_text(f"🔄 Rebuilt as clip #{new_id}. Run /queue to review it.")
+            if new_id is None:
+                await q.message.reply_text("Couldn't rebuild right now — try /new shortly.")
         elif action == "pub":
             scr = json.loads(row["script"]) if row and row["script"] else {}
             story = {"title": row["story_title"] if row else ""}
@@ -153,9 +199,22 @@ def run_bot(cfg) -> None:
     )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("queue", queue))
+    app.add_handler(CommandHandler("new", new))
+    app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("clear", clear))
     app.add_handler(CallbackQueryHandler(on_button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     app.add_error_handler(on_error)
-    db.log("bot", "Cockpit started")
+
+    if engine:
+        # The auto-builder runs in a daemon thread; it keeps the buffer full and
+        # pings you as each clip becomes ready. Dies with the process on Ctrl+C.
+        threading.Thread(target=orchestrator.run_forever, args=(cfg,), daemon=True).start()
+        orchestrator._notify(
+            cfg, "🟢 Engine + cockpit online. I'll auto-build clips and ping you here. "
+                 "Send /status anytime, or /new to build one now."
+        )
+        db.log("bot", "Cockpit + engine started (--auto)")
+    else:
+        db.log("bot", "Cockpit started")
     app.run_polling()

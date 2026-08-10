@@ -6,6 +6,7 @@
   python run.py --once        # top the review buffer up to target, then exit
   python run.py --serve       # run the engine loop forever (keeps the buffer full)
   python run.py --bot         # run the Telegram cockpit (review + publish + chat)
+  python run.py --auto        # BOTH at once: auto-build + phone cockpit (start once, walk away)
 
 Tip: with no LLM_API_KEY set, everything runs in free "dry" mode using templated
 scripts, so you can watch the whole pipeline before spending a cent.
@@ -26,6 +27,8 @@ def main() -> None:
     p.add_argument("--once", action="store_true", help="top up the buffer then exit")
     p.add_argument("--serve", action="store_true", help="run the engine loop forever")
     p.add_argument("--bot", action="store_true", help="run the Telegram cockpit")
+    p.add_argument("--auto", action="store_true",
+                   help="auto-build AND phone cockpit together (start once, walk away)")
     p.add_argument("--auth-youtube", action="store_true", help="one-time YouTube sign-in")
     args = p.parse_args()
 
@@ -62,6 +65,11 @@ def main() -> None:
     if args.bot:
         from src.bot.telegram_bot import run_bot
         run_bot(cfg)
+        return
+
+    if args.auto:
+        from src.bot.telegram_bot import run_bot
+        run_bot(cfg, engine=True)
         return
 
     if args.auth_youtube:

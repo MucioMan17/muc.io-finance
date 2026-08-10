@@ -78,9 +78,14 @@ Install **ffmpeg** (only needed to produce the actual .mp4):
   engine is a Phase-3 task — see `docs/blueprint.md`.)
 
 ### 7. Hosting — when you want it running 24/7
-- Runs on your own computer for free while you test.
-- For always-on: a ~$5/mo VPS, or leave it running on a spare machine. `python run.py --serve`
-  keeps the buffer full; `python run.py --bot` runs the cockpit (run both).
+- **The one command to run:** `python run.py --auto` — this auto-builds clips *and* runs the phone
+  cockpit together, so you start it once and everything else happens from Telegram (review, `/new`,
+  `/status`, publish). This is what lets you be away from the computer.
+- Runs on your own computer for free while you test — but the machine has to stay **on and awake**
+  for clips to keep building while you're away (disable sleep in Windows power settings).
+- For truly always-on (computer off): a ~$5/mo VPS, or a spare machine you leave running. Same
+  command: `python run.py --auto`.
+- (`--serve` = engine only, `--bot` = cockpit only — `--auto` is just both in one process.)
 
 ---
 

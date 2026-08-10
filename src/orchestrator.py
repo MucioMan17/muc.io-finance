@@ -8,6 +8,7 @@ saved as 'ready' with its script + chart so you can see the pipeline working.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from pathlib import Path
 
@@ -18,6 +19,11 @@ from .pipeline import assemble, broll, curate, ingest, script, tts, verify, visu
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "output"
+
+# Only one clip is ever built at a time, no matter who asks (the background
+# engine loop or an on-demand /new from the phone). Prevents duplicate work
+# and keeps the single-threaded matplotlib/ffmpeg steps from overlapping.
+_BUILD_LOCK = threading.Lock()
 
 
 def _notify(cfg, text: str) -> None:
@@ -36,6 +42,11 @@ def _notify(cfg, text: str) -> None:
 
 def build_one(cfg) -> int | None:
     """Produce one clip and mark it 'ready' for review. Returns its id, or None."""
+    with _BUILD_LOCK:
+        return _build_one(cfg)
+
+
+def _build_one(cfg) -> int | None:
     vid = db.new_video()
 
     stories = ingest.fetch(cfg)
