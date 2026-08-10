@@ -9,7 +9,11 @@ brand:
   format: "What just happened to your money"
 
 queue:
-  buffer_target: 3                # keep this many videos ready for review
+  # How many finished clips to keep waiting for you.
+  #   1  = one at a time: review it, post/skip, then it builds the next (recommended).
+  #   0  = fully manual: it never auto-builds; you make each one with /new in Telegram.
+  #   3+ = bank a few ahead if you only check in occasionally.
+  buffer_target: 1
   poll_seconds: 900              # how often the engine checks the buffer (15 min)
 
 video:
