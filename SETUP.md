@@ -9,17 +9,29 @@ You can do the whole first section tonight for **free** (dry mode), then add key
 
 You need **Python 3.10+** and (for actual video) the **ffmpeg** binary.
 
+**Windows (Command Prompt):**
+```
+cd muc.io-finance
+pip install -r requirements.txt
+copy .env.example .env
+copy config.example.yaml config.yaml
+python run.py --init-db
+python run.py --sample
+```
+
+**macOS / Linux:**
 ```bash
 cd muc.io-finance
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-cp .env.example .env             # secrets go here (git-ignored)
-cp config.example.yaml config.yaml   # settings + your channel name
-
-python run.py --init-db          # create the database
-python run.py --sample           # build ONE clip and print its script
+cp .env.example .env
+cp config.example.yaml config.yaml
+python run.py --init-db
+python run.py --sample
 ```
+
+> A virtual environment (`.venv`) is optional — if `pip install` runs against your normal
+> Python, that's fine and everything still works.
 
 `--sample` pulls a real finance headline, writes a script, and renders a chart card
 into `./output/`. With no AI key it uses a labelled template — proof the pipeline works
