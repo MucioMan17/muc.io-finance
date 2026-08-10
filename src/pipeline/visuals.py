@@ -9,7 +9,6 @@ index/stock the story is actually about).
 """
 from __future__ import annotations
 
-import textwrap
 from pathlib import Path
 
 import numpy as np
@@ -56,15 +55,13 @@ def render(cfg, script: dict, out_path: str | Path) -> str:
     ax.axis("off")
     ax.patch.set_alpha(0)
 
+    # Brand kicker (top) + accent rule. The centre is left EMPTY on purpose —
+    # the burned-in captions are the hero and fill it as the video plays.
     ax.text(0.5, 0.90, brand.upper(), ha="center", va="center",
             color=ACCENT, fontsize=30, weight="bold")
     ax.plot([0.36, 0.64], [0.875, 0.875], color=ACCENT, lw=4)
 
-    hook = script.get("hook", "")
-    ax.text(0.5, 0.64, "\n".join(textwrap.wrap(hook, 20)), ha="center", va="center",
-            color=FG, fontsize=52, weight="bold", linespacing=1.3)
-
-    ax.text(0.5, 0.07, "MONEY NEWS, MADE SIMPLE", ha="center", va="center",
+    ax.text(0.5, 0.095, "MONEY NEWS, MADE SIMPLE", ha="center", va="center",
             color=MUTED, fontsize=22, weight="bold")
 
     fig.savefig(out_path, facecolor=BG)

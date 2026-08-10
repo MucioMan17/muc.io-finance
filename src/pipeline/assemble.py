@@ -40,7 +40,7 @@ def build(cfg, image_path: str, audio_path: str, out_path: str | Path,
 
     base_vf = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h}"
     motion_vf = (
-        f"{base_vf},zoompan=z='min(zoom+0.0006,1.18)':d={frames}:"
+        f"{base_vf},zoompan=z='min(zoom+0.00035,1.08)':d={frames}:"
         f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={w}x{h}:fps={FPS}"
     ) if frames else None
 

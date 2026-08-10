@@ -23,10 +23,11 @@ TICKS_PER_SECOND = 10_000_000  # edge-tts offsets are in 100-nanosecond ticks
 WORDS_PER_CUE = 3
 
 # Caption look, in real pixels (because the ASS header sets PlayResX/Y to the video size).
-FONT_SIZE = 82
-OUTLINE = 5
+# Alignment 5 = middle-centre: the captions ARE the hero, filling the centre of the frame.
+FONT_SIZE = 92
+OUTLINE = 6
 SHADOW = 1
-MARGIN_V = 320   # distance of the caption baseline from the bottom edge
+MARGIN_V = 0
 
 ASS_HEADER = """[Script Info]
 ScriptType: v4.00+
@@ -37,7 +38,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,{fs},&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,{outline},{shadow},2,90,90,{mv},1
+Style: Default,Arial,{fs},&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,{outline},{shadow},5,120,120,{mv},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -60,12 +61,27 @@ def _cues_to_ass(cues: list[tuple[float, float, str]], w: int, h: int) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _ends_sentence(word: str) -> bool:
+    return word.rstrip("\"')").endswith((".", "?", "!", ":", "—"))
+
+
+def _chunk_words(tokens: list) -> list[list]:
+    """Group tokens into cues of <= WORDS_PER_CUE, never crossing a sentence end
+    (so we don't get cues like 'YOU. THE GOVERNMENT'S')."""
+    chunks, cur = [], []
+    for tok in tokens:
+        cur.append(tok)
+        text = tok if isinstance(tok, str) else tok[2]
+        if len(cur) >= WORDS_PER_CUE or _ends_sentence(text):
+            chunks.append(cur)
+            cur = []
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
 def _group_word_cues(words: list[tuple[float, float, str]]) -> list[tuple[float, float, str]]:
-    cues = []
-    for i in range(0, len(words), WORDS_PER_CUE):
-        chunk = words[i:i + WORDS_PER_CUE]
-        cues.append((chunk[0][0], chunk[-1][1], " ".join(w[2] for w in chunk)))
-    return cues
+    return [(c[0][0], c[-1][1], " ".join(w[2] for w in c)) for c in _chunk_words(words)]
 
 
 def _timed_cues(text: str, duration: float) -> list[tuple[float, float, str]]:
@@ -73,8 +89,8 @@ def _timed_cues(text: str, duration: float) -> list[tuple[float, float, str]]:
     words = text.split()
     if not words or not duration:
         return []
-    chunks = [words[i:i + WORDS_PER_CUE] for i in range(0, len(words), WORDS_PER_CUE)]
-    weights = [sum(len(w) for w in c) + len(c) for c in chunks]  # chars + spaces ≈ speaking time
+    chunks = _chunk_words(words)
+    weights = [sum(len(w) for w in c) + len(c) for c in chunks]  # chars ≈ speaking time
     total = sum(weights) or 1
     cues, t = [], 0.0
     for chunk, wt in zip(chunks, weights):
