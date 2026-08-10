@@ -134,10 +134,15 @@ def synth(cfg, text: str, out_path: str | Path) -> tuple[str, str | None]:
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     audio_f.write(chunk["data"])
-                elif chunk["type"] in ("WordBoundary", "SentenceBoundary"):
-                    start = chunk["offset"] / TICKS_PER_SECOND
-                    dur = chunk["duration"] / TICKS_PER_SECOND
-                    words.append((start, start + dur, chunk["text"]))
+                elif chunk["type"] == "WordBoundary":
+                    # WORD boundaries only. SentenceBoundary events carry the whole
+                    # sentence and would swamp the screen; the extra single-word guard
+                    # makes sure only real per-word cues ever get in.
+                    tok = (chunk.get("text") or "").strip()
+                    if tok and " " not in tok:
+                        start = chunk["offset"] / TICKS_PER_SECOND
+                        dur = chunk["duration"] / TICKS_PER_SECOND
+                        words.append((start, start + dur, tok))
 
     asyncio.run(_run())
 
