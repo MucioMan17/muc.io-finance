@@ -101,6 +101,18 @@ def clear_ready() -> int:
         return cur.rowcount
 
 
+def reset_history(keep_published: bool = True) -> int:
+    """Forget skipped/queued clips so their stories can be covered again.
+
+    Published clips are kept by default, so a story you've actually posted is
+    never re-covered. Returns how many rows were removed.
+    """
+    with connect() as conn:
+        sql = "DELETE FROM videos WHERE status != 'published'" if keep_published \
+            else "DELETE FROM videos"
+        return conn.execute(sql).rowcount
+
+
 def used_story_keys() -> set[str]:
     """URLs + titles of stories we've already turned into clips (any status).
 

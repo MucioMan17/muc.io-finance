@@ -44,6 +44,7 @@ def run_bot(cfg, engine: bool = False) -> None:
             "• /new — build a fresh clip right now.\n"
             "• /status — how many are ready / published.\n"
             "• /clear — empty the review queue.\n"
+            "• /reset — re-open stories skipped earlier (keeps published).\n"
             "• Ask me anything, e.g. 'what did you do today?'"
         )
 
@@ -122,6 +123,17 @@ def run_bot(cfg, engine: bool = False) -> None:
         else:
             await update.message.reply_text(preview + "\n\n_(no video file yet — voice/ffmpeg not set up)_",
                                             parse_mode="Markdown", reply_markup=buttons)
+
+    async def reset(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
+        if not _only_owner(cfg, update):
+            return
+        n = db.reset_history()
+        db.log("bot", f"You reset history ({n} clips forgotten)")
+        await update.message.reply_text(
+            f"♻️ Reset — forgot {n} old clip(s). Every story you skipped during testing "
+            "is available again (anything you've published is kept, so it won't repost).\n\n"
+            "Tap /new to build the first one."
+        )
 
     async def clear(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
         if not _only_owner(cfg, update):
@@ -202,6 +214,7 @@ def run_bot(cfg, engine: bool = False) -> None:
     app.add_handler(CommandHandler("new", new))
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("clear", clear))
+    app.add_handler(CommandHandler("reset", reset))
     app.add_handler(CallbackQueryHandler(on_button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     app.add_error_handler(on_error)
