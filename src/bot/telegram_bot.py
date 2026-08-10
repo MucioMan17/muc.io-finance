@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+import time
 
 from .. import db, orchestrator
 from ..brain import llm, prompts
@@ -216,24 +217,26 @@ def run_bot(cfg, engine: bool = False) -> None:
         db.log("bot", f"error: {context.error!r}")
         print(f"[bot] handled error: {context.error!r}")
 
-    app = (
-        Application.builder()
-        .token(cfg.telegram_bot_token)
-        .read_timeout(60)
-        .write_timeout(180)
-        .connect_timeout(30)
-        .pool_timeout(30)
-        .build()
-    )
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("queue", queue))
-    app.add_handler(CommandHandler("new", new))
-    app.add_handler(CommandHandler("status", status))
-    app.add_handler(CommandHandler("clear", clear))
-    app.add_handler(CommandHandler("reset", reset))
-    app.add_handler(CallbackQueryHandler(on_button))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    app.add_error_handler(on_error)
+    def _build_app():
+        app = (
+            Application.builder()
+            .token(cfg.telegram_bot_token)
+            .read_timeout(60)
+            .write_timeout(180)
+            .connect_timeout(30)
+            .pool_timeout(30)
+            .build()
+        )
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("queue", queue))
+        app.add_handler(CommandHandler("new", new))
+        app.add_handler(CommandHandler("status", status))
+        app.add_handler(CommandHandler("clear", clear))
+        app.add_handler(CommandHandler("reset", reset))
+        app.add_handler(CallbackQueryHandler(on_button))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+        app.add_error_handler(on_error)
+        return app
 
     if engine:
         # The auto-builder runs in a daemon thread; it keeps the buffer full and
@@ -246,4 +249,16 @@ def run_bot(cfg, engine: bool = False) -> None:
         db.log("bot", "Cockpit + engine started (--auto)")
     else:
         db.log("bot", "Cockpit started")
-    app.run_polling()
+
+    # Supervisor loop: a transient network blip (e.g. Telegram 'Gateway Timeout',
+    # or Wi-Fi dropping) should never end a multi-day run — reconnect and continue.
+    while True:
+        try:
+            _build_app().run_polling()
+            break  # clean shutdown (Ctrl+C)
+        except (KeyboardInterrupt, SystemExit):
+            break
+        except Exception as exc:  # noqa: BLE001 — keep the cockpit alive through hiccups
+            db.log("bot", f"cockpit reconnecting after error: {exc!r}")
+            print(f"[bot] connection hiccup ({exc!r}); reconnecting in 15s…")
+            time.sleep(15)
