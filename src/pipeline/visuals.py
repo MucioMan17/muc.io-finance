@@ -1,11 +1,12 @@
-"""Stage 5 — generate the video's visual (a branded vertical card + chart).
+"""Stage 5 — the branded background card (behind the captions).
 
-We render our OWN visuals with matplotlib, so there's zero copyright risk
-(no scraped news photos or footage). v1 draws a title card with the hook plus
-an illustrative chart.
+We render our OWN visuals with matplotlib, so there's zero copyright risk.
+This is a clean editorial card: a brand kicker, the hook as a bold headline,
+an accent rule, and a tagline. The dropped "illustrative" placeholder chart is
+gone — a fake chart looked cheaper than none.
 
-TODO: pull real market data (e.g. an index/stock relevant to the story) and
-plot that instead of the placeholder series.
+TODO (next passes): motion, per-section scene changes, and REAL data charts
+(pull the index/stock the story is about and plot it).
 """
 from __future__ import annotations
 
@@ -18,9 +19,10 @@ import matplotlib.pyplot as plt
 
 from .. import db
 
-BG = "#0E1116"
-FG = "#F4F1EA"
-ACCENT = "#E8A33D"
+BG = "#0B0E13"       # near-black
+FG = "#F5F3EC"       # warm off-white
+ACCENT = "#F2B84B"   # amber
+MUTED = "#8A93A3"    # slate grey
 
 
 def render(cfg, script: dict, out_path: str | Path) -> str:
@@ -34,22 +36,24 @@ def render(cfg, script: dict, out_path: str | Path) -> str:
     fig = plt.figure(figsize=(w / 100, h / 100), dpi=100)
     fig.patch.set_facecolor(BG)
 
-    # Hook headline (top third)
+    # Brand kicker (top)
+    fig.text(0.5, 0.90, brand.upper(), ha="center", va="center",
+             color=ACCENT, fontsize=30, weight="bold")
+
+    # Accent rule under the kicker
+    bar = fig.add_axes([0.34, 0.876, 0.32, 0.004])
+    bar.set_facecolor(ACCENT)
+    bar.axis("off")
+
+    # Hook as the headline (upper-middle; lower third is left clear for captions)
     hook = script.get("hook", "")
-    fig.text(0.5, 0.82, "\n".join(textwrap.wrap(hook, 26)),
-             ha="center", va="top", color=FG, fontsize=34, weight="bold")
+    fig.text(0.5, 0.66, "\n".join(textwrap.wrap(hook, 20)),
+             ha="center", va="center", color=FG, fontsize=52,
+             weight="bold", linespacing=1.3)
 
-    # Illustrative chart (middle) — replace with real market data (see TODO above)
-    ax = fig.add_axes([0.12, 0.30, 0.76, 0.34])
-    ax.set_facecolor(BG)
-    ax.plot([0, 1, 2, 3, 4, 5], [3, 3.4, 3.1, 3.8, 3.6, 4.2], color=ACCENT, linewidth=4)
-    for spine in ax.spines.values():
-        spine.set_color(FG)
-    ax.tick_params(colors=FG)
-    ax.set_title("illustrative — replace with real data", color=FG, fontsize=14)
-
-    # Brand footer
-    fig.text(0.5, 0.06, brand, ha="center", color=ACCENT, fontsize=22, weight="bold")
+    # Tagline (bottom)
+    fig.text(0.5, 0.07, "MONEY NEWS, MADE SIMPLE", ha="center", va="center",
+             color=MUTED, fontsize=22, weight="bold")
 
     fig.savefig(out_path, facecolor=BG)
     plt.close(fig)

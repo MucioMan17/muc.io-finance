@@ -61,9 +61,9 @@ def build_one(cfg) -> int | None:
     video_path = None
     try:
         audio = OUTPUT / f"{vid}.mp3"
-        tts.synth(cfg, script.to_narration(scr), audio)
+        audio_path, srt_path = tts.synth(cfg, script.to_narration(scr), audio)
         video_path = str(OUTPUT / f"{vid}.mp4")
-        assemble.build(cfg, str(card), str(audio), video_path)
+        assemble.build(cfg, str(card), audio_path, video_path, srt_path)
     except Exception as exc:  # edge-tts / ffmpeg not ready — keep going
         video_path = None
         db.log("assemble", f"Voice/video step skipped: {exc}", video_id=vid)

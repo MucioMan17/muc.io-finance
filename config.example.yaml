@@ -19,7 +19,10 @@ video:
   words_target: 150               # ~150 words = ~60s of speech
 
 tts:
-  voice: "en-US-AriaNeural"       # a warm edge-tts voice; see SETUP.md for alternatives
+  # Free edge-tts voice. Try these for a warmer/more natural read and pick your favourite:
+  #   en-US-AvaNeural  en-US-EmmaNeural  en-US-JennyNeural  en-US-AriaNeural
+  #   en-US-AndrewNeural  en-US-BrianNeural  (male)
+  voice: "en-US-AvaNeural"
 
 # Finance news sources (RSS — free, no keys). Add/remove freely.
 feeds:
