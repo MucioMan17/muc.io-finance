@@ -32,8 +32,26 @@ def complete(cfg, system: str, user: str, temperature: float = 0.6, timeout: int
         },
         timeout=timeout,
     )
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"].strip()
+
+    try:
+        data = resp.json()
+    except ValueError:
+        raise RuntimeError(
+            f"AI provider returned a non-JSON response (HTTP {resp.status_code}). "
+            f"First 200 chars: {resp.text[:200]}"
+        )
+
+    # OpenRouter / OpenAI-compatible APIs report problems as an 'error' object,
+    # sometimes even with an HTTP 200 — surface that message instead of crashing.
+    if isinstance(data, dict) and data.get("error"):
+        err = data["error"]
+        msg = err.get("message") if isinstance(err, dict) else str(err)
+        raise RuntimeError(f"AI provider error: {msg}")
+
+    if not (isinstance(data, dict) and data.get("choices")):
+        raise RuntimeError(f"Unexpected AI response (HTTP {resp.status_code}): {str(data)[:300]}")
+
+    return data["choices"][0]["message"]["content"].strip()
 
 
 def complete_json(cfg, system: str, user: str, **kw) -> dict | None:
