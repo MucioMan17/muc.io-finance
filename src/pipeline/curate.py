@@ -9,6 +9,18 @@ def pick(cfg, stories: list[dict]) -> dict | None:
     if not stories:
         return None
 
+    # Never cover the same story twice: drop anything we've already made a clip of.
+    used = db.used_story_keys()
+    fresh = [
+        s for s in stories
+        if s.get("url", "").strip().lower() not in used
+        and s.get("title", "").strip().lower() not in used
+    ]
+    if not fresh:
+        db.log("curate", "No new stories — every current headline is already covered")
+        return None
+    stories = fresh
+
     audience = cfg.get("brand", "audience", default="beginners")
     numbered = "\n".join(f"{i+1}. {s['title']}" for i, s in enumerate(stories))
 

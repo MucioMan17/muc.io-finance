@@ -101,6 +101,24 @@ def clear_ready() -> int:
         return cur.rowcount
 
 
+def used_story_keys() -> set[str]:
+    """URLs + titles of stories we've already turned into clips (any status).
+
+    Used to stop the engine from covering the same headline twice.
+    """
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT story_url, story_title FROM videos WHERE story_title IS NOT NULL"
+        ).fetchall()
+    keys: set[str] = set()
+    for r in rows:
+        if r["story_url"]:
+            keys.add(r["story_url"].strip().lower())
+        if r["story_title"]:
+            keys.add(r["story_title"].strip().lower())
+    return keys
+
+
 def recent_journal(limit: int = 50) -> list[sqlite3.Row]:
     with connect() as conn:
         return conn.execute(
