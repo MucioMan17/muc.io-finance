@@ -64,12 +64,13 @@ See [`docs/blueprint.md`](docs/blueprint.md) for the full architecture and roadm
 **Planning — direction locked.**
 
 Decisions made:
-- **Niche:** finance for beginners (markets & money, explained simply)
+- **Niche & angle:** *"What just happened to your money"* — daily money news translated for
+  people in their late teens/20s who feel behind, in a warm encouraging-teacher voice
 - **Platforms:** YouTube Shorts + TikTok
 - **Cadence:** rolling queue, keep 1–3 videos ready for review
 - **Autonomy:** auto-generate → review & publish from your phone (Telegram)
 - **Stack:** Python · Claude · SQLite · matplotlib/plotly · ffmpeg · Telegram bot ·
   YouTube API — on a ~$5/mo always-on host
 
-**Next step:** Phase 1 — find the distinct *angle/voice* within beginner finance by testing
-a few by hand, then automate the winner. See [`docs/blueprint.md`](docs/blueprint.md).
+**Next step:** Phase 1 — hand-produce a few videos in this angle to prove it lands, then
+automate the winning pattern. Full angle spec in [`docs/blueprint.md`](docs/blueprint.md) §8.

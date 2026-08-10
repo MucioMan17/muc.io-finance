@@ -156,9 +156,10 @@ find a working angle *first*, then automate hard.
 
 ## 6. Locked decisions
 
-1. **Niche:** **Finance for beginners** — markets & money explained simply. Broad
-   top-of-funnel, advertiser-friendly, strong affiliate fit. *Still needs a distinct
-   angle/voice to stand out — that's the differentiator, not the automation.*
+1. **Niche & angle:** **"What just happened to your money"** — daily money news translated
+   for people in their **late teens and 20s who feel behind**, in a **warm,
+   encouraging-teacher voice**. Jargon-free, calm, always ending on one small doable
+   takeaway. Full spec in §8.
 2. **Platforms:** **YouTube Shorts + TikTok** (one 9:16 video serves both).
    **Format: every video is exactly 1 minute** (≈150-word script, hook-first).
 3. **Cadence:** rolling queue — keep a **1–3 video buffer** ready; refill the moment you
@@ -168,9 +169,45 @@ find a working angle *first*, then automate hard.
 5. **Stack:** see §3 — Python, Claude, SQLite, matplotlib/plotly, ffmpeg, a Telegram bot
    cockpit, YouTube API (TikTok with the noted caveat), on a ~$5/mo always-on host.
 
-## 7. Next: Phase 1 (when back at a main PC)
+## 7. Next: Phase 1 — test the angle by hand
 
-The remaining creative choice before building is the **angle/voice** within
-"finance for beginners" — the thing that makes someone follow *you*. That's the Phase 1
-job: try a few angles by hand (AI-drafted) and see what actually gets views and signups,
-*then* automate the winner.
+The angle is decided (§8). Before automating anything, prove it lands: hand-produce a
+handful of videos in this exact angle and voice (AI-drafted, human-finished), post them,
+and watch what performs. Automate the winning pattern — don't build the full pipeline
+around an untested angle.
+
+## 8. The angle & video template
+
+**Positioning (one line):** *A warm, encouraging money-news translator for people in their
+late teens and 20s who feel behind — every day, one thing that happened in the world of
+money, explained simply and calmly, with a clear "here's what it means for you" and one
+small, doable takeaway.*
+
+**The 60-second template** (every video follows this spine):
+1. **Hook (0–3s):** the news, made relatable and non-scary — "If you've got money in a
+   savings account, this one's for you."
+2. **What happened (3–15s):** the event in plain English — verified facts, no jargon.
+3. **Why it matters to *you* (15–40s):** tie it to a 20-something's real life (first job,
+   rent, savings, first investments), over 1–2 chart beats.
+4. **The takeaway (40–55s):** one small, doable, *encouraging* action or reassurance —
+   never fear. "Nothing to do today, but here's what to watch."
+5. **Soft CTA (55–60s):** "Want this every morning? Newsletter link in bio."
+
+**Voice rules:**
+- Talk *to* one person — second-person ("you"), like a slightly-older friend who gets it.
+- Define any term the instant you use it; never assume they "should already know."
+- Stay calm and reassuring even on scary news — lower anxiety, don't stoke it.
+- Short, warm sentences with a little energy. Never condescending.
+
+**Monetization fit (why this audience is strong):** beginner-friendly affiliates —
+budgeting apps, starter investing apps, high-yield savings, personal-finance books; a daily
+"money news for beginners" newsletter this audience will habitually open; later, your own
+beginner starter guide or templates.
+
+**Angle-specific risks to respect:**
+- **Accuracy matters more here** — this audience trusts you and may act on it. The verify
+  step and your quality gate are non-negotiable; keep every "what it means" defensible.
+- **Stay encouraging, never fear-mongering.** "Feeling behind" is the hook, but the content
+  must empower, not scare — which also keeps it advertiser-safe.
+- **Education, not advice.** Carry a light "this is education, not financial advice"
+  posture, especially around product mentions and suggested actions.
