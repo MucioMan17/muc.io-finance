@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import threading
 import time
 
@@ -97,33 +98,45 @@ def run_bot(cfg, engine: bool = False) -> None:
         total = len(ready)
         scr = json.loads(v["script"]) if v["script"] else {}
         header = f"📋 {total} clips waiting — showing the newest:\n\n" if total > 1 else ""
+        # Plain text (no Markdown) so a stray * or _ in a headline can never break sending.
         preview = (
             header +
-            f"*{v['story_title']}*\n"
+            f"{v['story_title']}\n"
             f"confidence: {v['confidence']:.0%}\n\n"
             f"🎬 {scr.get('hook','')}\n{scr.get('what_happened','')}\n"
             f"{scr.get('why_it_matters','')}\n👉 {scr.get('takeaway','')}"
-        )
+        )[:1000]
         buttons = InlineKeyboardMarkup([[
             InlineKeyboardButton("✅ Publish", callback_data=f"pub:{v['id']}"),
             InlineKeyboardButton("❌ Skip", callback_data=f"skip:{v['id']}"),
             InlineKeyboardButton("🔄 Regenerate", callback_data=f"regen:{v['id']}"),
         ]])
-        if v["video_path"]:
+
+        path = v["video_path"]
+        # Telegram bots can't send files over 50 MB; publishing reads from disk anyway.
+        if path and os.path.exists(path) and os.path.getsize(path) <= 49_000_000:
             vw = cfg.get("video", "width", default=1080)
             vh = cfg.get("video", "height", default=1920)
-            with open(v["video_path"], "rb") as f:
-                # Videos are big; give the upload real time (defaults are ~5s).
-                # Passing width/height tells Telegram it's vertical so the
-                # preview shows tall (9:16) instead of a squished square.
-                await update.message.reply_video(
-                    f, caption=preview[:1000], parse_mode="Markdown", reply_markup=buttons,
-                    supports_streaming=True, width=vw, height=vh,
-                    read_timeout=180, write_timeout=180, connect_timeout=30, pool_timeout=30,
-                )
+            try:
+                with open(path, "rb") as f:
+                    await update.message.reply_video(
+                        f, caption=preview, reply_markup=buttons,
+                        supports_streaming=True, width=vw, height=vh,
+                        read_timeout=180, write_timeout=180, connect_timeout=30, pool_timeout=30,
+                    )
+                return
+            except Exception as exc:  # noqa: BLE001 — still let you publish via the text fallback
+                db.log("bot", f"/queue preview send failed: {exc!r}")
+
+        # Fallback: always deliver the buttons so you can still Publish/Skip/Regenerate.
+        if not path or not os.path.exists(path):
+            note = "\n\n(No video file on disk for this clip — try /new to rebuild.)"
+        elif os.path.getsize(path) > 49_000_000:
+            note = (f"\n\n(Video is {os.path.getsize(path)//1_000_000} MB — too big to preview in "
+                    "Telegram, but it's ready on disk, so Publish still works.)")
         else:
-            await update.message.reply_text(preview + "\n\n_(no video file yet — voice/ffmpeg not set up)_",
-                                            parse_mode="Markdown", reply_markup=buttons)
+            note = "\n\n(Couldn't attach the preview here, but the clip is ready — Publish still works.)"
+        await update.message.reply_text(preview + note, reply_markup=buttons)
 
     async def reset(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
         if not _only_owner(cfg, update):
