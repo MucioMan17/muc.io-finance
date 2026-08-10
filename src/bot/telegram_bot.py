@@ -36,7 +36,8 @@ def run_bot(cfg) -> None:
         await update.message.reply_text(
             "👋 I'm your finance-news engine.\n\n"
             "• I build 1-minute clips and hold them here for your OK.\n"
-            "• /queue — review the next one (Publish / Skip / Regenerate).\n"
+            "• /queue — review the newest one (Publish / Skip / Regenerate).\n"
+            "• /clear — empty the review queue (clears old test clips).\n"
             "• Ask me anything, e.g. 'what did you do today?'"
         )
 
@@ -47,9 +48,12 @@ def run_bot(cfg) -> None:
         if not ready:
             await update.message.reply_text("Nothing ready right now — I'll ping you when a clip is built.")
             return
-        v = ready[0]
+        v = ready[0]  # newest first
+        total = len(ready)
         scr = json.loads(v["script"]) if v["script"] else {}
+        header = f"📋 {total} clips waiting — showing the newest:\n\n" if total > 1 else ""
         preview = (
+            header +
             f"*{v['story_title']}*\n"
             f"confidence: {v['confidence']:.0%}\n\n"
             f"🎬 {scr.get('hook','')}\n{scr.get('what_happened','')}\n"
@@ -71,6 +75,17 @@ def run_bot(cfg) -> None:
         else:
             await update.message.reply_text(preview + "\n\n_(no video file yet — voice/ffmpeg not set up)_",
                                             parse_mode="Markdown", reply_markup=buttons)
+
+    async def clear(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
+        if not _only_owner(cfg, update):
+            return
+        n = db.clear_ready()
+        db.log("bot", f"You cleared the queue ({n} clips)")
+        await update.message.reply_text(
+            f"🧹 Cleared {n} clip(s) from the review queue.\n"
+            "Build a fresh one with `python run.py --sample`, then /queue."
+            if n else "Queue was already empty."
+        )
 
     async def on_button(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
         if not _only_owner(cfg, update):
@@ -134,6 +149,7 @@ def run_bot(cfg) -> None:
     )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("queue", queue))
+    app.add_handler(CommandHandler("clear", clear))
     app.add_handler(CallbackQueryHandler(on_button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     app.add_error_handler(on_error)

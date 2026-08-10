@@ -87,8 +87,18 @@ def count_by_status(status: str) -> int:
 def ready_videos() -> list[sqlite3.Row]:
     with connect() as conn:
         return conn.execute(
-            "SELECT * FROM videos WHERE status = 'ready' ORDER BY created_at ASC"
+            "SELECT * FROM videos WHERE status = 'ready' ORDER BY created_at DESC"
         ).fetchall()
+
+
+def clear_ready() -> int:
+    """Mark every ready clip as skipped (empties the review queue). Returns how many."""
+    with connect() as conn:
+        cur = conn.execute(
+            "UPDATE videos SET status = 'skipped', updated_at = ? WHERE status = 'ready'",
+            (time.time(),),
+        )
+        return cur.rowcount
 
 
 def recent_journal(limit: int = 50) -> list[sqlite3.Row]:
