@@ -68,3 +68,29 @@ def render(cfg, script: dict, out_path: str | Path) -> str:
     plt.close(fig)
     db.log("visuals", f"Rendered card -> {out_path.name}")
     return str(out_path)
+
+
+def render_overlay(cfg, out_path: str | Path) -> str:
+    """A transparent PNG with just the brand kicker + tagline, to sit over b-roll."""
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    w = cfg.get("video", "width", default=1080)
+    h = cfg.get("video", "height", default=1920)
+    brand = cfg.get("brand", "name", default="muc.io finance")
+
+    fig = plt.figure(figsize=(w / 100, h / 100), dpi=100)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    ax.text(0.5, 0.92, brand.upper(), ha="center", va="center",
+            color=ACCENT, fontsize=30, weight="bold")
+    ax.plot([0.36, 0.64], [0.895, 0.895], color=ACCENT, lw=4)
+    ax.text(0.5, 0.06, "MONEY NEWS, MADE SIMPLE", ha="center", va="center",
+            color=FG, fontsize=22, weight="bold")
+
+    fig.savefig(out_path, transparent=True)
+    plt.close(fig)
+    db.log("visuals", f"Rendered overlay -> {out_path.name}")
+    return str(out_path)

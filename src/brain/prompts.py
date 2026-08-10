@@ -54,6 +54,14 @@ Return JSON only, no prose around it:
 {{"hook": "...", "what_happened": "...", "why_it_matters": "...", "takeaway": "...", "cta": "..."}}"""
 
 
+# Pick a concrete, visual search term for background stock footage.
+KEYWORD = """Give ONE short stock-footage search term (1-2 words) for background video
+behind a clip about this story. It must be concrete and visual (e.g. "stock market",
+"cash", "city skyline", "shopping"), not abstract. Story: "{title}"
+
+Reply with ONLY the search term, nothing else."""
+
+
 # A quick factual sanity-check before we commit to a story.
 VERIFY = """You are a careful fact-checker for a beginner finance channel.
 Below is a news story. Flag anything that looks unverified, speculative, or like a rumor.
