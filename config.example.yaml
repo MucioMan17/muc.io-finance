@@ -24,6 +24,12 @@ tts:
   #   en-US-AndrewNeural  en-US-BrianNeural  (male)
   voice: "en-US-AvaNeural"
 
+# What goes on every post (title is auto-made from the hook).
+post:
+  newsletter_url: ""              # your signup link — appears in every description (earns from day 1)
+  disclaimer: "Educational content, not financial advice."
+  hashtags: ["#money", "#finance", "#investing", "#personalfinance", "#moneytips"]
+
 # Finance news sources (RSS — free, no keys). Add/remove freely.
 feeds:
   - "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"

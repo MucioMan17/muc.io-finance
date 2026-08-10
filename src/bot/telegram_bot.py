@@ -86,15 +86,16 @@ def run_bot(cfg) -> None:
             db.log("bot", f"You asked to regenerate #{vid} -> #{new_id}", video_id=vid)
             await q.message.reply_text(f"🔄 Rebuilt as clip #{new_id}. Run /queue to review it.")
         elif action == "pub":
-            title = row["story_title"] if row else "Money news"
             scr = json.loads(row["script"]) if row and row["script"] else {}
-            desc = scr.get("cta", "")
-            yt = publish.upload_youtube(cfg, row["video_path"], title, desc) if row and row["video_path"] else None
+            story = {"title": row["story_title"] if row else ""}
+            title, desc, tags = publish.build_metadata(cfg, story, scr)
+            yt = (publish.upload_youtube(cfg, row["video_path"], title, desc, tags)
+                  if row and row["video_path"] else None)
             db.update_video(vid, status="published")
             db.log("bot", f"You published clip #{vid} (youtube={yt})", video_id=vid)
-            msg = "✅ Published to YouTube." if yt else "✅ Marked published."
+            msg = f"✅ Published to YouTube: {yt}" if yt else "✅ Marked published (no YouTube auth yet)."
             if row and row["video_path"]:
-                msg += " For TikTok, post the video file I sent — takes a few seconds."
+                msg += "\nFor TikTok, post the video file I sent — a few seconds."
             await q.message.reply_text(msg)
 
     async def chat(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
