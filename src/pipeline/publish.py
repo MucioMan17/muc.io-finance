@@ -24,16 +24,49 @@ def build_metadata(cfg, story: dict, script: dict) -> tuple[str, str, list[str]]
 
     hashtags = cfg.get("post", "hashtags", default=["#money", "#finance", "#investing"])
     newsletter = cfg.get("post", "newsletter_url", default="")
+    hub = cfg.get("post", "hub_url", default="")
     disclaimer = cfg.get("post", "disclaimer", default="Educational content, not financial advice.")
 
     parts = [script.get("takeaway") or script.get("cta") or ""]
     if newsletter:
-        parts.append(f"📩 Daily money news for beginners → {newsletter}")
+        parts.append(f"📩 Get the free daily newsletter → {newsletter}")
+    if hub:
+        parts.append(f"🔗 All my links → {hub}")
+
+    aff_block = _affiliate_block(cfg)
+    if aff_block:
+        parts.append(aff_block)
+
     parts.append(disclaimer)
     parts.append(" ".join(hashtags))
     description = "\n\n".join(p for p in parts if p)[:4900]
     tags = [h.lstrip("#") for h in hashtags][:15]
     return title, description, tags
+
+
+def _affiliate_block(cfg) -> str:
+    """Format the affiliate links from config, with an automatic FTC disclosure.
+
+    Each config entry is {label, url} (or a bare url string). Returns "" if none set,
+    so nothing is added until you actually configure links.
+    """
+    items = cfg.get("post", "affiliate_links", default=[]) or []
+    lines = []
+    for item in items:
+        if isinstance(item, dict):
+            label = str(item.get("label", "")).strip()
+            url = str(item.get("url", "")).strip()
+        else:
+            label, url = "", str(item).strip()
+        if url:
+            lines.append(f"• {label + ' → ' if label else ''}{url}")
+    if not lines:
+        return ""
+    return (
+        "Tools I actually recommend for beginners:\n"
+        + "\n".join(lines)
+        + "\n(Some are affiliate links — I may earn a small commission at no extra cost to you.)"
+    )
 
 
 def authorize(cfg) -> bool:

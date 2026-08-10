@@ -32,9 +32,18 @@ tts:
 post:
   privacy: "public"               # set to "unlisted" while TESTING, then "public" to go live
   newsletter_url: ""              # your signup link — appears in every description (earns from day 1)
+  hub_url: ""                     # your link hub, e.g. https://mucfinance.netlify.app
   channel_url: ""                 # your YouTube channel/@handle link — added to the newsletter footer
   disclaimer: "Educational content, not financial advice."
   hashtags: ["#money", "#finance", "#investing", "#personalfinance", "#moneytips"]
+  # Affiliate links added to EVERY video description (a disclosure line is auto-appended).
+  # Keep them genuinely useful & beginner-appropriate — never risky junk. Example:
+  #   affiliate_links:
+  #     - label: "My favorite free budgeting app"
+  #       url: "https://your-affiliate-link"
+  #     - label: "The beginner investing book I recommend"
+  #       url: "https://your-affiliate-link"
+  affiliate_links: []
 
 # Email newsletter (Buttondown). Needs BUTTONDOWN_API_KEY in .env.
 newsletter:
