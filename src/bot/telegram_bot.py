@@ -36,6 +36,10 @@ def run_bot(cfg, engine: bool = False) -> None:
         Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters,
     )
 
+    # Remember Telegram's file_id per clip so re-viewing the same clip is instant
+    # (no re-upload). Cleared when the process restarts — that's fine.
+    _file_id_cache: dict[int, str] = {}
+
     async def start(update: Update, _ctx: ContextTypes.DEFAULT_TYPE):
         if not _only_owner(cfg, update):
             return
@@ -113,17 +117,32 @@ def run_bot(cfg, engine: bool = False) -> None:
         ]])
 
         path = v["video_path"]
-        # Telegram bots can't send files over 50 MB; publishing reads from disk anyway.
+        vw = cfg.get("video", "width", default=1080)
+        vh = cfg.get("video", "height", default=1920)
+        tmo = dict(read_timeout=180, write_timeout=180, connect_timeout=30, pool_timeout=30)
+
+        # Instant re-view: reuse Telegram's copy if we've already uploaded this clip.
+        cached = _file_id_cache.get(v["id"])
+        if cached:
+            try:
+                await update.message.reply_video(
+                    cached, caption=preview, reply_markup=buttons,
+                    supports_streaming=True, width=vw, height=vh, **tmo)
+                return
+            except Exception as exc:  # noqa: BLE001 — stale id, fall through to re-upload
+                db.log("bot", f"/queue cached send failed, re-uploading: {exc!r}")
+                _file_id_cache.pop(v["id"], None)
+
+        # First view: upload from disk once, then remember the file_id.
+        # (Telegram bots can't send files over 50 MB; publishing reads from disk anyway.)
         if path and os.path.exists(path) and os.path.getsize(path) <= 49_000_000:
-            vw = cfg.get("video", "width", default=1080)
-            vh = cfg.get("video", "height", default=1920)
             try:
                 with open(path, "rb") as f:
-                    await update.message.reply_video(
+                    msg = await update.message.reply_video(
                         f, caption=preview, reply_markup=buttons,
-                        supports_streaming=True, width=vw, height=vh,
-                        read_timeout=180, write_timeout=180, connect_timeout=30, pool_timeout=30,
-                    )
+                        supports_streaming=True, width=vw, height=vh, **tmo)
+                if msg and msg.video:
+                    _file_id_cache[v["id"]] = msg.video.file_id
                 return
             except Exception as exc:  # noqa: BLE001 — still let you publish via the text fallback
                 db.log("bot", f"/queue preview send failed: {exc!r}")
