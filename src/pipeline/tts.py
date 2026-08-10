@@ -1,43 +1,77 @@
-"""Stage 6a — voiceover + word-timed captions (edge-tts: free, no API key).
+"""Stage 6a — voiceover + captions (edge-tts: free, no API key).
 
-Synthesizes the narration AND captures per-word timings, which we turn into an
-SRT subtitle file so the assembler can burn big animated captions into the video.
-Needs an internet connection (Microsoft's free TTS endpoint).
+Captions are made two ways, for reliability:
+  1. Word-timed — from edge-tts word-boundary events, when the service sends them.
+  2. Time-distributed — if no word timings arrive, we measure the audio's length
+     with ffprobe and spread the caption cues across it proportionally.
 
-Returns (audio_path, srt_path). srt_path is None if no word timings came back.
+Either way you get an SRT to burn into the video. Returns (audio_path, srt_path);
+srt_path is None only if we couldn't produce captions at all.
 """
 from __future__ import annotations
 
 import asyncio
+import shutil
+import subprocess
 from pathlib import Path
 
 from .. import db
 
-# edge-tts word offsets/durations are in 100-nanosecond "ticks".
-TICKS_PER_SECOND = 10_000_000
+TICKS_PER_SECOND = 10_000_000  # edge-tts offsets are in 100-nanosecond ticks
+WORDS_PER_CUE = 3
 
 
 def _fmt_ts(seconds: float) -> str:
+    seconds = max(0.0, seconds)
     h = int(seconds // 3600)
     m = int((seconds % 3600) // 60)
     s = seconds % 60
     return f"{h:02d}:{m:02d}:{s:06.3f}".replace(".", ",")
 
 
-def _write_srt(words: list[tuple[float, float, str]], srt_path: Path, group: int = 3) -> bool:
-    """Group words into short caption cues (~`group` words each). Returns True if written."""
-    if not words:
-        return False
+def _cues_to_srt(cues: list[tuple[float, float, str]]) -> str:
+    blocks = []
+    for i, (start, end, text) in enumerate(cues, 1):
+        blocks.append(f"{i}\n{_fmt_ts(start)} --> {_fmt_ts(end)}\n{text.upper()}\n")
+    return "\n".join(blocks)
+
+
+def _group_word_cues(words: list[tuple[float, float, str]]) -> list[tuple[float, float, str]]:
     cues = []
-    idx = 1
-    for i in range(0, len(words), group):
-        chunk = words[i:i + group]
-        start, end = chunk[0][0], chunk[-1][1]
-        text = " ".join(w[2] for w in chunk).upper()  # uppercase reads punchier on short-form
-        cues.append(f"{idx}\n{_fmt_ts(start)} --> {_fmt_ts(end)}\n{text}\n")
-        idx += 1
-    srt_path.write_text("\n".join(cues), encoding="utf-8")
-    return True
+    for i in range(0, len(words), WORDS_PER_CUE):
+        chunk = words[i:i + WORDS_PER_CUE]
+        cues.append((chunk[0][0], chunk[-1][1], " ".join(w[2] for w in chunk)))
+    return cues
+
+
+def _timed_cues(text: str, duration: float) -> list[tuple[float, float, str]]:
+    """Spread caption cues across `duration`, weighted by how long each cue's text is."""
+    words = text.split()
+    if not words or not duration:
+        return []
+    chunks = [words[i:i + WORDS_PER_CUE] for i in range(0, len(words), WORDS_PER_CUE)]
+    weights = [sum(len(w) for w in c) + len(c) for c in chunks]  # chars + spaces ≈ speaking time
+    total = sum(weights) or 1
+    cues, t = [], 0.0
+    for chunk, wt in zip(chunks, weights):
+        dur = duration * wt / total
+        cues.append((t, t + dur, " ".join(chunk)))
+        t += dur
+    return cues
+
+
+def _audio_duration(path: Path) -> float | None:
+    if shutil.which("ffprobe") is None:
+        return None
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
+            capture_output=True, text=True, check=True,
+        )
+        return float(out.stdout.strip())
+    except (subprocess.CalledProcessError, ValueError):
+        return None
 
 
 def synth(cfg, text: str, out_path: str | Path) -> tuple[str, str | None]:
@@ -56,13 +90,23 @@ def synth(cfg, text: str, out_path: str | Path) -> tuple[str, str | None]:
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     audio_f.write(chunk["data"])
-                elif chunk["type"] == "WordBoundary":
+                elif chunk["type"] in ("WordBoundary", "SentenceBoundary"):
                     start = chunk["offset"] / TICKS_PER_SECOND
                     dur = chunk["duration"] / TICKS_PER_SECOND
                     words.append((start, start + dur, chunk["text"]))
 
     asyncio.run(_run())
 
-    has_captions = _write_srt(words, srt_path)
-    db.log("tts", f"Synthesized voiceover ({'with' if has_captions else 'no'} captions) -> {out_path.name}")
-    return str(out_path), (str(srt_path) if has_captions else None)
+    if words:
+        cues, source = _group_word_cues(words), "word-timed"
+    else:
+        duration = _audio_duration(out_path)
+        cues, source = (_timed_cues(text, duration) if duration else []), "time-distributed"
+
+    if cues:
+        srt_path.write_text(_cues_to_srt(cues), encoding="utf-8")
+        db.log("tts", f"Voiceover + {source} captions ({len(cues)} cues) -> {out_path.name}")
+        return str(out_path), str(srt_path)
+
+    db.log("tts", f"Voiceover, no captions available -> {out_path.name}")
+    return str(out_path), None
